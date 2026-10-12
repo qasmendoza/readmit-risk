@@ -1,0 +1,30 @@
+# Production: pinned image, more replicas, and the secrets become mandatory.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: readmit-risk
+    newName: ghcr.io/qasmendoza/readmit-risk
+    newTag: "0.1.0"
+patches:
+  - target:
+      kind: Deployment
+      name: readmit-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+      - op: replace
+        path: /spec/template/spec/containers/0/envFrom/1/secretRef/optional
+        value: false
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: readmit-api
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 10

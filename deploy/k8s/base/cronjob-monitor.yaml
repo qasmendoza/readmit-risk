@@ -1,0 +1,64 @@
+# Weekly drift monitoring: compares the latest FHIR extract on the data volume with the
+# model's training profile. `--fail-on-drift` makes the Job fail (exit code 2) on drift,
+# which alerting picks up (e.g. kube-state-metrics kube_job_status_failed).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: readmit-drift-monitor
+spec:
+  schedule: "0 6 * * 1"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: monitor
+        spec:
+          restartPolicy: Never
+          serviceAccountName: readmit-api
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: monitor
+              image: readmit-risk
+              imagePullPolicy: IfNotPresent
+              command:
+                - readmit
+                - monitor
+                - --input=/data/fhir/current
+                - --model-dir=/app/artifacts/model
+                - --output=/data/reports/monitoring
+                - --fail-on-drift
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 1Gi
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: readmit-data
+            - name: tmp
+              emptyDir: {}

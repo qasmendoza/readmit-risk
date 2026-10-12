@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: readmit
+labels:
+  - pairs:
+      app.kubernetes.io/name: readmit-risk
+      app.kubernetes.io/part-of: readmit-risk
+    includeSelectors: true
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
+  - pvc.yaml
+  - cronjob-monitor.yaml
+# The image is set per overlay (dev: local build, prod: pinned registry tag). Setting it here
+# as well would rename it before the overlays run and silently defeat their overrides.

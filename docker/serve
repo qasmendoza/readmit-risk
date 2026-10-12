@@ -1,0 +1,7 @@
+#!/bin/sh
+# Amazon SageMaker starts bring-your-own containers as `docker run <image> serve`.
+# The app serves /ping and /invocations on port 8080 and loads the model from /opt/ml/model
+# (SageMaker sets READMIT_MODEL_PATH=/opt/ml/model through the model's environment).
+set -eu
+exec uvicorn readmit.serving.app:app --host 0.0.0.0 --port 8080 \
+  --workers "${READMIT_WORKERS:-1}" --no-access-log

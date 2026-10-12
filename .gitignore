@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Data and models: never commit patient data; models are rebuilt by CI and the Docker build
+data/*
+!data/README.md
+artifacts/
+mlruns/
+mlartifacts/
+mlflow.db
+tools/
+*.tar.gz
+
+# Local experiment outputs (the main evaluation report in reports/ is committed)
+reports/monitoring/
+reports/synthea/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/

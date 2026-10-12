@@ -1,0 +1,36 @@
+# Local stack. API only:         docker compose up --build
+# API + MLflow tracking server:  docker compose --profile tracking up --build
+#   then train with: readmit run --synthetic --set tracking.tracking_uri=http://localhost:5000
+name: readmit-risk
+services:
+  api:
+    build: .
+    image: readmit-risk:local
+    ports:
+      - "8080:8080"
+    environment:
+      READMIT_API_KEY: ${READMIT_API_KEY:-}
+      READMIT_AUDIT_SALT: ${READMIT_AUDIT_SALT:-local-dev-salt}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.17.0
+    profiles: ["tracking"]
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+
+volumes:
+  mlflow-data: {}

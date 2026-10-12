@@ -1,0 +1,34 @@
+# Local development (e.g. kind): one replica, locally built image, monitor suspended.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: readmit-risk
+    newName: readmit-risk
+    newTag: local
+patches:
+  - target:
+      kind: Deployment
+      name: readmit-api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: readmit-api
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 2
+  - target:
+      kind: CronJob
+      name: readmit-drift-monitor
+    patch: |-
+      - op: add
+        path: /spec/suspend
+        value: true

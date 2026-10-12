@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: readmit-config
+data:
+  READMIT_MODEL_PATH: /app/artifacts/model
+  READMIT_LOG_LEVEL: INFO
+  READMIT_MAX_BODY_MB: "10"
+  # Secrets (READMIT_API_KEY, READMIT_AUDIT_SALT, ANTHROPIC_API_KEY) come from the
+  # optional "readmit-secrets" Secret; see docs/DEPLOYMENT.md. Never commit them.

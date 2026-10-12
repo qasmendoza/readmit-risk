@@ -1,0 +1,72 @@
+# ReadmitRisk configuration. Override any key from the CLI, e.g.:
+#   readmit run --set evaluation.capacity_fraction=0.05 --set "models.candidates=[lace, hist_gbm]"
+project: readmit-risk
+seed: 42
+
+data:
+  input_dir: data/fhir                # FHIR R4: Bulk Data NDJSON or Bundle JSON (e.g. Synthea output)
+  input_format: auto                  # auto | ndjson | bundle
+  tables_dir: data/tables             # flattened Parquet tables
+  synthetic_patients: 3000
+
+cohort:                               # simplified from the CMS Hospital Readmissions Reduction Program
+  min_age: 18
+  followup_days: 30                   # readmission window; discharges without full follow-up are excluded
+  transfer_gap_hours: 24              # contiguous inpatient encounters within this gap = one hospitalization
+  exclude_encounter_types:            # non-acute inpatient settings (never index stays or readmissions)
+    - skilled nursing
+    - rehabilitation
+    - detoxification
+    - hospice
+    - psychiatric
+  as_of_date: null                    # data extraction date; defaults to the latest encounter end
+
+features:                             # every feature uses only data available at discharge
+  utilization_lookback_days: 365
+  ed_lookback_days: 182
+  lab_lookback_days: 365
+  medication_lookback_days: 365
+  condition_active_window_days: 365
+  polypharmacy_threshold: 5
+
+split:
+  test_fraction: 0.2                  # most recent discharges held out (temporal validation)
+  cv_folds: 5                         # patient-grouped cross-validation on the training period
+
+models:
+  candidates: [lace, logistic, hist_gbm]
+  selection_metric: average_precision # readmissions are imbalanced, so AUPRC drives selection
+  calibration: sigmoid                # sigmoid | isotonic
+  monotonic_constraints: true         # risk never decreases with more utilization or comorbidity
+
+evaluation:
+  bootstrap_iterations: 1000          # patient-level cluster bootstrap for confidence intervals
+  alpha: 0.05
+  capacity_fraction: 0.10             # care-management capacity: flag the top 10% of discharges
+  moderate_fraction: 0.30
+  fairness_attributes: [sex, race, ethnicity, age_band]
+  fairness_min_group_size: 50
+
+gate:                                 # the pipeline fails (and CI goes red) if these are not met
+  enforce: true
+  min_auroc: 0.65
+  require_beats_baseline: true
+  baseline: lace
+  max_fairness_auroc_gap: null        # e.g. 0.10 to block deployment on subgroup disparities
+
+copilot:
+  knowledge_dir: knowledge
+  llm_model: claude-haiku-5-5         # override with READMIT_LLM_MODEL
+  max_tokens: 700
+  top_k_guidance: 3
+
+tracking:
+  enabled: true
+  tracking_uri: sqlite:///mlflow.db   # or http://localhost:5000 with docker compose
+  experiment: readmission-risk
+  register_model: false
+  model_name: readmission-risk
+
+output:
+  artifacts_dir: artifacts
+  reports_dir: reports
